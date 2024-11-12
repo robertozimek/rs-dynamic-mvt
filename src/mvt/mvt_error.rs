@@ -1,3 +1,4 @@
+use std::error::Error;
 use std::fmt;
 
 #[derive(Debug, Clone)]
@@ -8,3 +9,5 @@ impl fmt::Display for BinaryTileError {
         write!(f, "failed to encode tile binary")
     }
 }
+
+impl Error for BinaryTileError {}

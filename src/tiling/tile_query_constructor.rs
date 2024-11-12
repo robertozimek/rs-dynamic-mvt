@@ -1,4 +1,4 @@
-use crate::geo::geo::{get_bounding_box_from_tile, translate_zoom_to_h3_resolution};
+use crate::geo::geo_utils::{get_bounding_box_from_tile, translate_zoom_to_h3_resolution};
 use h3o::Resolution;
 use indoc::indoc;
 

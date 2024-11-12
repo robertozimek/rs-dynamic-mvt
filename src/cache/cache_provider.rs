@@ -28,7 +28,7 @@ impl CacheProvider {
 
     pub fn get_bytes(&mut self, key: &str) -> Option<Vec<u8>> {
         if let Some(mut conn) = self.redis_client.clone() {
-            if let Some(exists) = redis::cmd("EXISTS").arg(key).query::<u8>(&mut conn).ok() {
+            if let Ok(exists) = redis::cmd("EXISTS").arg(key).query::<u8>(&mut conn) {
                 if exists == 1 {
                     return redis::cmd("GET").arg(key).query::<Vec<u8>>(&mut conn).ok();
                 }

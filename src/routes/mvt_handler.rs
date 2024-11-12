@@ -71,7 +71,7 @@ pub async fn get_tile(State(mut state): State<AppState>, Path(params): Path<MVTC
     if let Some(value) = state.cache.get_bytes(&cache_key) {
         let bytes = Bytes::from(value);
         return MVTBody {
-            data: Bytes::from(bytes),
+            data: bytes,
             cache_header: state.config.cache_control_header,
         }.into_response();
     }

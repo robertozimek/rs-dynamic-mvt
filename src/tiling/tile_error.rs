@@ -1,5 +1,6 @@
+use std::error::Error;
+use std::fmt::Formatter;
 use std::{fmt, io};
-
 
 #[derive(PartialEq, Debug)]
 pub enum TileError {
@@ -8,9 +9,11 @@ pub enum TileError {
     NotFound,
 }
 
+impl Error for TileError {}
+
 impl fmt::Display for TileError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.to_string())
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "failed to generate tile")
     }
 }
 

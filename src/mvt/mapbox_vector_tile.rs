@@ -129,7 +129,7 @@ impl MapboxLayer {
         }
     }
 
-    pub async fn add_features(&mut self, features: &Vec<Feature>) {
+    pub async fn add_features(&mut self, features: &[Feature]) {
         let mut proto_features: Vec<ProtoFeature> = Vec::new();
 
         let mut tasks = FuturesUnordered::new();
@@ -139,7 +139,7 @@ impl MapboxLayer {
             let keys = self.keys.clone();
             let values = self.values.clone();
 
-            tasks.push(add_feature(tile_projector, keys, values, &feature));
+            tasks.push(add_feature(tile_projector, keys, values, feature));
         }
 
         while let Some(Some(proto_feature)) = tasks.next().await {
@@ -183,7 +183,7 @@ impl MapboxVectorTile {
 
     pub fn to_bytes(&self) -> Result<Vec<u8>, BinaryTileError> {
         let mut v: Vec<u8> = Vec::with_capacity(self.tile.compute_size() as usize);
-        if let Err(_) = self.write_to(&mut v) {
+        if self.write_to(&mut v).is_err() {
             return Err(BinaryTileError);
         }
         Ok(v)
@@ -191,11 +191,11 @@ impl MapboxVectorTile {
 
     fn write_to(&self, mut out: &mut Vec<u8>) -> Result<(), BinaryTileError> {
         let mut coded_output_stream = CodedOutputStream::new(&mut out);
-        if let Err(_) = self.tile.write_to(&mut coded_output_stream) {
+        if self.tile.write_to(&mut coded_output_stream).is_err() {
             return Err(BinaryTileError);
         }
 
-        if let Err(_) = coded_output_stream.flush() {
+        if coded_output_stream.flush().is_err() {
             return Err(BinaryTileError);
         }
         Ok(())

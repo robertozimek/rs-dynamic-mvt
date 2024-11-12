@@ -57,7 +57,7 @@ async fn main() {
         .nest("/mvt", mvt_route)
         .layer(cors)
         .with_state(AppState {
-            pool: pool,
+            pool,
             cache: cache_provider,
             config: config.clone(),
         });

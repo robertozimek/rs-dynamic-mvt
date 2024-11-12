@@ -28,7 +28,7 @@ pub fn mercator_to_tile(longitude: f64, latitude: f64, zoom_level: u32) -> Point
 }
 
 pub fn to_point(x: f64, y: f64, z: u32) -> (f64, f64) {
-    let max_tiles = get_max_tiles_from_zoom(z) as f64;
+    let max_tiles = get_max_tiles_from_zoom(z);
 
     let pi = std::f64::consts::PI;
     let longitude = 360.0 * (x / max_tiles - 0.5);

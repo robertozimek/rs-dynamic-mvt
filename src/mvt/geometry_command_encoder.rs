@@ -1,4 +1,4 @@
-use crate::geo::geo::mercator_to_tile;
+use crate::geo::geo_utils::mercator_to_tile;
 use crate::mvt::mapbox_vector_tile::Coordinates;
 use crate::protos::vector_tile::tile::GeomType;
 use geo_types::{Coord, Geometry, LineString, Point, Polygon};
@@ -55,7 +55,7 @@ pub trait FromGeometry {
 impl<'a> GeometryCommandEncoder<'a> {
     fn new(point_projection: &'a TileProjection) -> GeometryCommandEncoder<'a> {
         GeometryCommandEncoder {
-            point_projection: point_projection,
+            point_projection,
             prev_point: EncoderPoint {
                 x: 0,
                 y: 0,
@@ -64,13 +64,13 @@ impl<'a> GeometryCommandEncoder<'a> {
         }
     }
 
-    fn move_to(&mut self, points: &Vec<Point>) {
+    fn move_to(&mut self, points: &[Point]) {
         let size = points.len();
         self.data.push(((MOVE_TO & 0x7) | (size << 3)) as u32);
         self.push_points(points);
     }
 
-    fn line_to(&mut self, points: &Vec<Point>) {
+    fn line_to(&mut self, points: &[Point]) {
         let size = points.len();
         self.data.push(((LINE_TO & 0x7) | (size << 3)) as u32);
         self.push_points(points);
@@ -80,7 +80,7 @@ impl<'a> GeometryCommandEncoder<'a> {
         self.data.push(((CLOSE_PATH & 0x7) | (1 << 3)) as u32)
     }
 
-    fn push_points(&mut self, points: &Vec<Point>) {
+    fn push_points(&mut self, points: &[Point]) {
         for point in points.iter() {
             let point = self.point_projection.project_point(point);
 
@@ -105,14 +105,14 @@ impl<'a> FromGeometry for GeometryCommandEncoder<'a> {
     fn from_geometry_with_projection(geom: &Geometry, point_projection: &TileProjection) -> Result<GeometryData, String> {
         let add_line = |encoder: &mut GeometryCommandEncoder, line_string: &LineString| {
             let points = line_string.points().collect::<Vec<Point>>();
-            let point = points.get(0).unwrap();
-            encoder.move_to(&vec![*point]);
+            let point = points.first().unwrap();
+            encoder.move_to(&[*point]);
 
             if line_string.is_closed() {
                 let size = points.len() - 1;
-                encoder.line_to(&points[1..size].to_vec());
+                encoder.line_to(&points[1..size]);
             } else {
-                encoder.line_to(&points[1..].to_vec());
+                encoder.line_to(&points[1..]);
             }
             encoder.close_path();
         };
@@ -128,7 +128,7 @@ impl<'a> FromGeometry for GeometryCommandEncoder<'a> {
         match geom {
             Geometry::Point(point) => {
                 let mut encoder = GeometryCommandEncoder::new(point_projection);
-                let points = vec![*point];
+                let points = [*point];
                 encoder.move_to(&points);
 
                 Ok(GeometryData { geometry_type: GeomType::POINT, geometry: encoder.data })
@@ -136,8 +136,8 @@ impl<'a> FromGeometry for GeometryCommandEncoder<'a> {
             Geometry::LineString(line_string) => {
                 let mut encoder = GeometryCommandEncoder::new(point_projection);
                 let points = line_string.points().collect::<Vec<Point>>();
-                encoder.move_to(&vec![points[0]]);
-                encoder.line_to(&points[1..].to_owned());
+                encoder.move_to(&[points[0]]);
+                encoder.line_to(&points[1..]);
 
                 Ok(GeometryData { geometry_type: GeomType::LINESTRING, geometry: encoder.data })
             }
@@ -145,8 +145,8 @@ impl<'a> FromGeometry for GeometryCommandEncoder<'a> {
                 let mut encoder = GeometryCommandEncoder::new(point_projection);
                 for line_string in multi_line_string.iter() {
                     let points = line_string.points().collect::<Vec<Point>>();
-                    encoder.move_to(&vec![points[0]]);
-                    encoder.line_to(&points[1..].to_owned());
+                    encoder.move_to(&[points[0]]);
+                    encoder.line_to(&points[1..]);
                 }
                 Ok(GeometryData { geometry_type: GeomType::LINESTRING, geometry: encoder.data })
             }
