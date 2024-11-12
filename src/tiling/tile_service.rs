@@ -26,7 +26,9 @@ impl<'a> TileService<'a> {
     ) -> Result<Vec<u8>, TileError> {
         let raw_query = get_tile_query(x, y, z, query, geo_col, srid);
 
-        let query_results = sqlx::query_as::<_, TileRow>(&raw_query).fetch_all(self.pool).await;
+        let query_results = sqlx::query_as::<_, TileRow>(&raw_query)
+            .fetch_all(self.pool)
+            .await;
         if let Err(error) = query_results {
             return Err(TileError::DatabaseError(error.to_string()));
         }
@@ -40,7 +42,10 @@ impl<'a> TileService<'a> {
                 }
 
                 let h3_cluster_count = serde_json::Number::from(tile_row.h3_cluster_count);
-                properties.insert("h3ClusterCount".to_string(), Value::Number(h3_cluster_count));
+                properties.insert(
+                    "h3ClusterCount".to_string(),
+                    Value::Number(h3_cluster_count),
+                );
 
                 let feature = Feature {
                     geometry: tile_row.geometry_bin.0,
@@ -54,19 +59,11 @@ impl<'a> TileService<'a> {
         let mut layer_map: HashMap<String, Vec<Feature>> = HashMap::new();
         layer_map.insert("default".to_string(), features);
 
-        let tile = MapboxVectorTile::new(&Coordinates {
-            x,
-            y,
-            z,
-        }, &layer_map).await;
+        let tile = MapboxVectorTile::new(&Coordinates { x, y, z }, &layer_map).await;
 
         match tile.to_bytes() {
-            Ok(bytes) => {
-                Ok(bytes)
-            }
-            Err(error) => {
-                Err(TileError::EncodingError(error.to_string()))
-            }
+            Ok(bytes) => Ok(bytes),
+            Err(error) => Err(TileError::EncodingError(error.to_string())),
         }
     }
 }

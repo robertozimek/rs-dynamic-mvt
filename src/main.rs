@@ -26,7 +26,6 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-
     let mut cors = CorsLayer::new()
         .allow_methods([Method::GET])
         .allow_headers(Any)
@@ -41,7 +40,6 @@ async fn main() {
         cors = cors.allow_origin(Any);
     };
 
-
     let cache_provider = CacheProvider::new(config.cache_url.clone());
     let pool = PgPoolOptions::new()
         .max_connections(10)
@@ -50,8 +48,7 @@ async fn main() {
         .await
         .expect("can't connect to database");
 
-    let mvt_route = Router::new()
-        .route("/:x/:y/:z", get(get_tile));
+    let mvt_route = Router::new().route("/:x/:y/:z", get(get_tile));
 
     let mut app = Router::new()
         .nest("/mvt", mvt_route)
@@ -67,8 +64,7 @@ async fn main() {
         let mut default_headers = HeaderMap::new();
         default_headers.insert(CONTENT_ENCODING, HeaderValue::from_static("gzip"));
 
-        let compression_layer = CompressionLayer::new()
-            .gzip(true);
+        let compression_layer = CompressionLayer::new().gzip(true);
         app = app
             .layer(compression_layer)
             .layer(DefaultHeaderLayer::new(default_headers));
@@ -78,4 +74,3 @@ async fn main() {
     tracing::debug!("listening on {}", listener.local_addr().unwrap());
     axum::serve(listener, app).await.unwrap();
 }
-

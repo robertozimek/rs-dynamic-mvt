@@ -1,9 +1,5 @@
 use axum::http::HeaderMap;
-use axum::{
-    extract::Request
-    ,
-    response::Response,
-};
+use axum::{extract::Request, response::Response};
 use futures_util::future::BoxFuture;
 use std::task::{Context, Poll};
 use tower::{Layer, Service};
@@ -19,12 +15,14 @@ impl DefaultHeaderLayer {
     }
 }
 
-impl<S> Layer<S> for DefaultHeaderLayer
-{
+impl<S> Layer<S> for DefaultHeaderLayer {
     type Service = DefaultHeaderMiddleware<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        DefaultHeaderMiddleware { inner, default_headers: self.default_headers.clone() }
+        DefaultHeaderMiddleware {
+            inner,
+            default_headers: self.default_headers.clone(),
+        }
     }
 }
 
@@ -36,7 +34,7 @@ pub struct DefaultHeaderMiddleware<S> {
 
 impl<S> Service<Request> for DefaultHeaderMiddleware<S>
 where
-    S: Service<Request, Response=Response> + Send + 'static,
+    S: Service<Request, Response = Response> + Send + 'static,
     S::Future: Send + 'static,
 {
     type Response = S::Response;

@@ -2,14 +2,7 @@ use crate::geo::geo_utils::{get_bounding_box_from_tile, translate_zoom_to_h3_res
 use h3o::Resolution;
 use indoc::indoc;
 
-pub fn get_tile_query(
-    x: u32,
-    y: u32,
-    z: u32,
-    query: &str,
-    geo_col: &str,
-    srid: &str,
-) -> String {
+pub fn get_tile_query(x: u32, y: u32, z: u32, query: &str, geo_col: &str, srid: &str) -> String {
     let bbox = get_bounding_box_from_tile(x, y, z);
 
     let envelope = format!(
@@ -23,7 +16,8 @@ pub fn get_tile_query(
 
     let h3_resolution = translate_zoom_to_h3_resolution(z);
 
-    let mut raw_query = format!(indoc! {r#"
+    let mut raw_query = format!(
+        indoc! {r#"
         WITH geometry_type AS (
             SELECT
                 row_to_json(t) as properties,
@@ -52,10 +46,16 @@ pub fn get_tile_query(
                 CAST(1 as int8) as h3ClusterCount
             FROM geometry_type t
 		) SELECT *, ST_AsBinary(__internal_geometry_mapped__) as __internal_geometry_bin__ FROM setup
-    "#}, query = query, bbox = envelope, geo_col = geo_col, zoom = z);
+    "#},
+        query = query,
+        bbox = envelope,
+        geo_col = geo_col,
+        zoom = z
+    );
 
     if h3_resolution < Resolution::Fifteen as u32 {
-        raw_query = format!(indoc! {r#"
+        raw_query = format!(
+            indoc! {r#"
         WITH geometry_type AS (
 				SELECT
 					row_to_json(t) as properties,
@@ -110,7 +110,13 @@ pub fn get_tile_query(
                 *,
                 ST_AsBinary(__internal_geometry_mapped__) as __internal_geometry_bin__
             FROM points
-        "#}, query = query, bbox = envelope, geo_col = geo_col, zoom = z, h3_resolution = h3_resolution);
+        "#},
+            query = query,
+            bbox = envelope,
+            geo_col = geo_col,
+            zoom = z,
+            h3_resolution = h3_resolution
+        );
     }
 
     raw_query

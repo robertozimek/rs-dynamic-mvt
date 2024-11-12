@@ -14,12 +14,13 @@ impl sqlx::Type<Postgres> for GeometryWkb {
     }
 }
 
-impl<'r> Decode<'r, Postgres> for GeometryWkb
-{
+impl<'r> Decode<'r, Postgres> for GeometryWkb {
     fn decode(value: <Postgres as Database>::ValueRef<'r>) -> Result<Self, BoxDynError> {
         let data = value.as_bytes().expect("Wkb data could not be decoded");
         let mut bytes_cursor = Cursor::new(data);
-        let geometry = bytes_cursor.read_wkb().expect("Failed to decode WKB into geometry");
+        let geometry = bytes_cursor
+            .read_wkb()
+            .expect("Failed to decode WKB into geometry");
         Ok(GeometryWkb(geometry))
     }
 }

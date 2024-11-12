@@ -45,8 +45,10 @@ impl IntoResponse for MVTBody {
         Response::builder()
             .status(StatusCode::OK)
             .header(header::CONTENT_TYPE, "application/protobuf")
-            .header(header::CACHE_CONTROL, self.cache_header
-                .unwrap_or("private, max-age=300".to_string()),
+            .header(
+                header::CACHE_CONTROL,
+                self.cache_header
+                    .unwrap_or("private, max-age=300".to_string()),
             )
             .body(Body::from(self.data))
             .unwrap()
@@ -65,7 +67,11 @@ fn get_cache_key(coordinates: &MVTCoordinates, query: &MVTQuery) -> String {
     calculate_hash(&as_string)
 }
 
-pub async fn get_tile(State(mut state): State<AppState>, Path(params): Path<MVTCoordinates>, Query(query): Query<MVTQuery>) -> impl IntoResponse {
+pub async fn get_tile(
+    State(mut state): State<AppState>,
+    Path(params): Path<MVTCoordinates>,
+    Query(query): Query<MVTQuery>,
+) -> impl IntoResponse {
     let cache_key = get_cache_key(&params, &query);
 
     if let Some(value) = state.cache.get_bytes(&cache_key) {
@@ -73,18 +79,29 @@ pub async fn get_tile(State(mut state): State<AppState>, Path(params): Path<MVTC
         return MVTBody {
             data: bytes,
             cache_header: state.config.cache_control_header,
-        }.into_response();
+        }
+        .into_response();
     }
 
     let tile_service = TileService::new(&state.pool);
-    let result = tile_service.get_tile(params.x, params.y, params.z, &query.query, &query.geo_col, &query.srid).await;
+    let result = tile_service
+        .get_tile(
+            params.x,
+            params.y,
+            params.z,
+            &query.query,
+            &query.geo_col,
+            &query.srid,
+        )
+        .await;
 
     if let Ok(bytes) = result {
         state.cache.set(&cache_key, &bytes);
         MVTBody {
             data: Bytes::from(bytes),
             cache_header: state.config.cache_control_header,
-        }.into_response()
+        }
+        .into_response()
     } else {
         Response::builder()
             .status(StatusCode::NOT_FOUND)

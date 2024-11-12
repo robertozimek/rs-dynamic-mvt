@@ -26,9 +26,7 @@ impl From<TileError> for io::Error {
             TileError::DatabaseError(message) => {
                 io::Error::new(io::ErrorKind::InvalidData, message)
             }
-            TileError::NotFound => {
-                io::Error::new(io::ErrorKind::NotFound, "No results")
-            }
+            TileError::NotFound => io::Error::new(io::ErrorKind::NotFound, "No results"),
         }
     }
 }

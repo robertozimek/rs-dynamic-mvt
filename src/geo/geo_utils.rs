@@ -23,7 +23,13 @@ pub fn mercator_to_tile(longitude: f64, latitude: f64, zoom_level: u32) -> Point
     let latitude_radians = latitude.to_radians();
     let n = u32::pow(2, zoom_level) as f64;
     let x = n * ((longitude + 180.0) / 360.0);
-    let y = n * (1.0 - f64::log(f64::tan(latitude_radians) + 1.0 / f64::cos(latitude_radians), std::f64::consts::E) / std::f64::consts::PI) / 2.0;
+    let y = n
+        * (1.0
+            - f64::log(
+                f64::tan(latitude_radians) + 1.0 / f64::cos(latitude_radians),
+                std::f64::consts::E,
+            ) / std::f64::consts::PI)
+        / 2.0;
     Point::new(x, y)
 }
 
@@ -32,11 +38,8 @@ pub fn to_point(x: f64, y: f64, z: u32) -> (f64, f64) {
 
     let pi = std::f64::consts::PI;
     let longitude = 360.0 * (x / max_tiles - 0.5);
-    let latitude = 2.0 * f64::atan(
-        f64::exp(
-            pi - (2.0 * pi) * (y / max_tiles)
-        )
-    ) * (180.0 / pi) - 90.0;
+    let latitude =
+        2.0 * f64::atan(f64::exp(pi - (2.0 * pi) * (y / max_tiles))) * (180.0 / pi) - 90.0;
 
     (longitude, latitude)
 }

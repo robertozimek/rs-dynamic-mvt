@@ -25,10 +25,7 @@ impl TileProjection {
         let min_y = ((coordinates.y as u64) << n) as f64;
 
         TileProjection {
-            min_point: Point(Coord {
-                x: min_x,
-                y: min_y,
-            }),
+            min_point: Point(Coord { x: min_x, y: min_y }),
             zoom_level: z,
         }
     }
@@ -49,17 +46,17 @@ pub struct GeometryCommandEncoder<'a> {
 }
 
 pub trait FromGeometry {
-    fn from_geometry_with_projection(geom: &Geometry, point_projection: &TileProjection) -> Result<GeometryData, String>;
+    fn from_geometry_with_projection(
+        geom: &Geometry,
+        point_projection: &TileProjection,
+    ) -> Result<GeometryData, String>;
 }
 
 impl<'a> GeometryCommandEncoder<'a> {
     fn new(point_projection: &'a TileProjection) -> GeometryCommandEncoder<'a> {
         GeometryCommandEncoder {
             point_projection,
-            prev_point: EncoderPoint {
-                x: 0,
-                y: 0,
-            },
+            prev_point: EncoderPoint { x: 0, y: 0 },
             data: vec![],
         }
     }
@@ -102,7 +99,10 @@ pub struct GeometryData {
 }
 
 impl<'a> FromGeometry for GeometryCommandEncoder<'a> {
-    fn from_geometry_with_projection(geom: &Geometry, point_projection: &TileProjection) -> Result<GeometryData, String> {
+    fn from_geometry_with_projection(
+        geom: &Geometry,
+        point_projection: &TileProjection,
+    ) -> Result<GeometryData, String> {
         let add_line = |encoder: &mut GeometryCommandEncoder, line_string: &LineString| {
             let points = line_string.points().collect::<Vec<Point>>();
             let point = points.first().unwrap();
@@ -118,7 +118,11 @@ impl<'a> FromGeometry for GeometryCommandEncoder<'a> {
         };
 
         let add_polygon = |encoder: &mut GeometryCommandEncoder, polygon: &Polygon| {
-            let lines: Vec<LineString> = [vec![polygon.exterior().clone()], polygon.interiors().to_vec()].concat();
+            let lines: Vec<LineString> = [
+                vec![polygon.exterior().clone()],
+                polygon.interiors().to_vec(),
+            ]
+            .concat();
 
             for line_string in lines.iter() {
                 add_line(encoder, line_string);
@@ -131,7 +135,10 @@ impl<'a> FromGeometry for GeometryCommandEncoder<'a> {
                 let points = [*point];
                 encoder.move_to(&points);
 
-                Ok(GeometryData { geometry_type: GeomType::POINT, geometry: encoder.data })
+                Ok(GeometryData {
+                    geometry_type: GeomType::POINT,
+                    geometry: encoder.data,
+                })
             }
             Geometry::LineString(line_string) => {
                 let mut encoder = GeometryCommandEncoder::new(point_projection);
@@ -139,7 +146,10 @@ impl<'a> FromGeometry for GeometryCommandEncoder<'a> {
                 encoder.move_to(&[points[0]]);
                 encoder.line_to(&points[1..]);
 
-                Ok(GeometryData { geometry_type: GeomType::LINESTRING, geometry: encoder.data })
+                Ok(GeometryData {
+                    geometry_type: GeomType::LINESTRING,
+                    geometry: encoder.data,
+                })
             }
             Geometry::MultiLineString(multi_line_string) => {
                 let mut encoder = GeometryCommandEncoder::new(point_projection);
@@ -148,13 +158,19 @@ impl<'a> FromGeometry for GeometryCommandEncoder<'a> {
                     encoder.move_to(&[points[0]]);
                     encoder.line_to(&points[1..]);
                 }
-                Ok(GeometryData { geometry_type: GeomType::LINESTRING, geometry: encoder.data })
+                Ok(GeometryData {
+                    geometry_type: GeomType::LINESTRING,
+                    geometry: encoder.data,
+                })
             }
             Geometry::Polygon(polygon) => {
                 let mut encoder = GeometryCommandEncoder::new(point_projection);
                 add_polygon(&mut encoder, polygon);
 
-                Ok(GeometryData { geometry_type: GeomType::POLYGON, geometry: encoder.data })
+                Ok(GeometryData {
+                    geometry_type: GeomType::POLYGON,
+                    geometry: encoder.data,
+                })
             }
             Geometry::MultiPolygon(multi_polygon) => {
                 let mut encoder = GeometryCommandEncoder::new(point_projection);
@@ -163,16 +179,20 @@ impl<'a> FromGeometry for GeometryCommandEncoder<'a> {
                     add_polygon(&mut encoder, polygon);
                 }
 
-                Ok(GeometryData { geometry_type: GeomType::POLYGON, geometry: encoder.data })
+                Ok(GeometryData {
+                    geometry_type: GeomType::POLYGON,
+                    geometry: encoder.data,
+                })
             }
             Geometry::MultiPoint(multi_point) => {
                 let mut encoder = GeometryCommandEncoder::new(point_projection);
                 encoder.move_to(&multi_point.0);
-                Ok(GeometryData { geometry_type: GeomType::POINT, geometry: encoder.data })
+                Ok(GeometryData {
+                    geometry_type: GeomType::POINT,
+                    geometry: encoder.data,
+                })
             }
-            _ => {
-                Err("Unsupported geometry type".to_string())
-            }
+            _ => Err("Unsupported geometry type".to_string()),
         }
     }
 }

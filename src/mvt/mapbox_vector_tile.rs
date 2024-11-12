@@ -53,15 +53,32 @@ pub fn get_value_index(values: Arc<Mutex<Vec<Value>>>, value: Value) -> usize {
     }
 }
 
-fn add_properties(keys: Arc<Mutex<Vec<String>>>, values: Arc<Mutex<Vec<Value>>>, feature: &mut ProtoFeature, properties: &serde_json::Value) {
+fn add_properties(
+    keys: Arc<Mutex<Vec<String>>>,
+    values: Arc<Mutex<Vec<Value>>>,
+    feature: &mut ProtoFeature,
+    properties: &serde_json::Value,
+) {
     if let serde_json::Value::Object(properties) = properties {
         for (key, property) in properties {
-            add_property(keys.clone(), values.clone(), feature, key.as_str(), property);
+            add_property(
+                keys.clone(),
+                values.clone(),
+                feature,
+                key.as_str(),
+                property,
+            );
         }
     }
 }
 
-fn add_property(keys: Arc<Mutex<Vec<String>>>, values: Arc<Mutex<Vec<Value>>>, feature: &mut ProtoFeature, key: &str, property: &serde_json::Value) {
+fn add_property(
+    keys: Arc<Mutex<Vec<String>>>,
+    values: Arc<Mutex<Vec<Value>>>,
+    feature: &mut ProtoFeature,
+    key: &str,
+    property: &serde_json::Value,
+) {
     let mut value = Value::new();
     match property {
         serde_json::Value::Null => {}
@@ -89,23 +106,31 @@ fn add_property(keys: Arc<Mutex<Vec<String>>>, values: Arc<Mutex<Vec<Value>>>, f
     feature.tags.push(value_index as u32);
 }
 
-pub async fn add_feature(tile_projector: Arc<TileProjection>, keys: Arc<Mutex<Vec<String>>>, values: Arc<Mutex<Vec<Value>>>, feature: &Feature) -> Option<ProtoFeature> {
+pub async fn add_feature(
+    tile_projector: Arc<TileProjection>,
+    keys: Arc<Mutex<Vec<String>>>,
+    values: Arc<Mutex<Vec<Value>>>,
+    feature: &Feature,
+) -> Option<ProtoFeature> {
     let mut proto_feature = ProtoFeature::new();
 
     if let Geometry::GeometryCollection(_) = &feature.geometry {
         return None;
     }
 
-    let result = GeometryCommandEncoder::from_geometry_with_projection(
-        &feature.geometry,
-        &tile_projector,
-    );
+    let result =
+        GeometryCommandEncoder::from_geometry_with_projection(&feature.geometry, &tile_projector);
 
     match result {
         Ok(geometry_data) => {
             proto_feature.set_type(geometry_data.geometry_type);
             proto_feature.geometry = geometry_data.geometry;
-            add_properties(keys.clone(), values.clone(), &mut proto_feature, &feature.properties);
+            add_properties(
+                keys.clone(),
+                values.clone(),
+                &mut proto_feature,
+                &feature.properties,
+            );
             Some(proto_feature)
         }
         Err(err) => {
@@ -164,7 +189,10 @@ pub struct MapboxVectorTile {
 }
 
 impl MapboxVectorTile {
-    pub async fn new(coordinates: &Coordinates, layers: &HashMap<String, Vec<Feature>>) -> MapboxVectorTile {
+    pub async fn new(
+        coordinates: &Coordinates,
+        layers: &HashMap<String, Vec<Feature>>,
+    ) -> MapboxVectorTile {
         let mut tile = Tile::new();
 
         for (name, features) in layers.iter() {
@@ -176,9 +204,7 @@ impl MapboxVectorTile {
             tile.layers.push(mapbox_layer.get_layer());
         }
 
-        MapboxVectorTile {
-            tile,
-        }
+        MapboxVectorTile { tile }
     }
 
     pub fn to_bytes(&self) -> Result<Vec<u8>, BinaryTileError> {

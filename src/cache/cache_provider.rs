@@ -15,14 +15,16 @@ impl CacheProvider {
             };
         }
 
-        CacheProvider {
-            redis_client: None,
-        }
+        CacheProvider { redis_client: None }
     }
 
     pub fn set<T: ToRedisArgs>(&mut self, key: &str, value: &T) {
         if let Some(mut conn) = self.redis_client.clone() {
-            redis::cmd("SET").arg(key).arg(value).exec(&mut conn).expect("Failed to set");
+            redis::cmd("SET")
+                .arg(key)
+                .arg(value)
+                .exec(&mut conn)
+                .expect("Failed to set");
         }
     }
 
