@@ -109,8 +109,7 @@ pub async fn add_feature(tile_projector: Arc<TileProjection>, keys: Arc<Mutex<Ve
             Some(proto_feature)
         }
         Err(err) => {
-            println!("{:?}", feature);
-            println!("{:?}", err);
+            println!("{:?} {:?}", feature, err);
             None
         }
     }

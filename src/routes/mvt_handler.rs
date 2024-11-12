@@ -1,5 +1,4 @@
-use crate::cache::cache_provider::CacheProvider;
-use crate::routes::dep::AppStateGeneric;
+use crate::dep::AppState;
 use crate::tiling::tile_service::TileService;
 use axum::body::Body;
 use axum::extract::{Path, Query, State};
@@ -8,7 +7,6 @@ use axum::response::{IntoResponse, Response};
 use bytes::Bytes;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use sqlx::PgPool;
 
 pub fn internal_error<E>(err: E) -> (StatusCode, String)
 where
@@ -37,14 +35,20 @@ pub struct MVTQuery {
     srid: String,
 }
 
-struct MVTBody(Bytes);
+struct MVTBody {
+    data: Bytes,
+    cache_header: Option<String>,
+}
 
 impl IntoResponse for MVTBody {
     fn into_response(self) -> Response {
         Response::builder()
             .status(StatusCode::OK)
             .header(header::CONTENT_TYPE, "application/protobuf")
-            .body(Body::from(self.0))
+            .header(header::CACHE_CONTROL, self.cache_header
+                .unwrap_or("private, max-age=300".to_string()),
+            )
+            .body(Body::from(self.data))
             .unwrap()
     }
 }
@@ -56,17 +60,20 @@ fn calculate_hash(t: &str) -> String {
     format!("{:x}", digest)
 }
 
-fn get_cache_key(coordinates: MVTCoordinates, query: MVTQuery) -> String {
+fn get_cache_key(coordinates: &MVTCoordinates, query: &MVTQuery) -> String {
     let as_string = format!("{:?}{:?}", coordinates, query);
     calculate_hash(&as_string)
 }
 
-pub async fn get_tile(State(mut state): State<AppStateGeneric<PgPool, CacheProvider>>, Path(params): Path<MVTCoordinates>, Query(query): Query<MVTQuery>) -> impl IntoResponse {
-    let cache_key = get_cache_key(params.clone(), query.clone());
+pub async fn get_tile(State(mut state): State<AppState>, Path(params): Path<MVTCoordinates>, Query(query): Query<MVTQuery>) -> impl IntoResponse {
+    let cache_key = get_cache_key(&params, &query);
 
     if let Some(value) = state.cache.get_bytes(&cache_key) {
         let bytes = Bytes::from(value);
-        return MVTBody(Bytes::from(bytes)).into_response();
+        return MVTBody {
+            data: Bytes::from(bytes),
+            cache_header: state.config.cache_control_header,
+        }.into_response();
     }
 
     let tile_service = TileService::new(&state.pool);
@@ -74,7 +81,10 @@ pub async fn get_tile(State(mut state): State<AppStateGeneric<PgPool, CacheProvi
 
     if let Ok(bytes) = result {
         state.cache.set(&cache_key, &bytes);
-        MVTBody(Bytes::from(bytes)).into_response()
+        MVTBody {
+            data: Bytes::from(bytes),
+            cache_header: state.config.cache_control_header,
+        }.into_response()
     } else {
         Response::builder()
             .status(StatusCode::NOT_FOUND)
