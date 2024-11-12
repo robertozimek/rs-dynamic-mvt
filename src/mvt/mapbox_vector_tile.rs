@@ -8,7 +8,7 @@ use futures::StreamExt;
 use geo_types::Geometry;
 use protobuf::{CodedOutputStream, Message};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
 #[derive(Debug)]
 pub struct Feature {
@@ -23,39 +23,49 @@ pub struct Coordinates {
 }
 
 pub struct MapboxLayer {
-    keys: Arc<Mutex<Vec<String>>>,
-    values: Arc<Mutex<Vec<Value>>>,
+    keys: Arc<RwLock<Vec<String>>>,
+    values: Arc<RwLock<Vec<Value>>>,
     layer: ProtoLayer,
     tile_projector: Arc<TileProjection>,
 }
 
-pub fn get_key_index(keys: Arc<Mutex<Vec<String>>>, key: &str) -> usize {
-    let mut keys = keys.lock().unwrap();
-    let position = keys.iter().position(|x| *x == key);
+pub fn get_key_index(keys: Arc<RwLock<Vec<String>>>, key: &str) -> usize {
+    let reader = keys.read().unwrap();
+    let position = reader.iter().position(|x| *x == key);
 
     if let Some(index) = position {
+        drop(reader);
         index
     } else {
-        keys.push(key.to_string());
-        keys.len() - 1
+        drop(reader);
+        let mut writer = keys.write().unwrap();
+        writer.push(key.to_string());
+        let index = writer.len() - 1;
+        drop(writer);
+        index
     }
 }
 
-pub fn get_value_index(values: Arc<Mutex<Vec<Value>>>, value: Value) -> usize {
-    let mut values = values.lock().unwrap();
-    let position = values.iter().position(|v| *v == value);
+pub fn get_value_index(values: Arc<RwLock<Vec<Value>>>, value: Value) -> usize {
+    let reader = values.read().unwrap();
+    let position = reader.iter().position(|v| *v == value);
 
     if let Some(index) = position {
+        drop(reader);
         index
     } else {
-        values.push(value);
-        values.len() - 1
+        drop(reader);
+        let mut writer = values.write().unwrap();
+        writer.push(value);
+        let index = writer.len() - 1;
+        drop(writer);
+        index
     }
 }
 
 fn add_properties(
-    keys: Arc<Mutex<Vec<String>>>,
-    values: Arc<Mutex<Vec<Value>>>,
+    keys: Arc<RwLock<Vec<String>>>,
+    values: Arc<RwLock<Vec<Value>>>,
     feature: &mut ProtoFeature,
     properties: &serde_json::Value,
 ) {
@@ -73,8 +83,8 @@ fn add_properties(
 }
 
 fn add_property(
-    keys: Arc<Mutex<Vec<String>>>,
-    values: Arc<Mutex<Vec<Value>>>,
+    keys: Arc<RwLock<Vec<String>>>,
+    values: Arc<RwLock<Vec<Value>>>,
     feature: &mut ProtoFeature,
     key: &str,
     property: &serde_json::Value,
@@ -108,8 +118,8 @@ fn add_property(
 
 pub async fn add_feature(
     tile_projector: Arc<TileProjection>,
-    keys: Arc<Mutex<Vec<String>>>,
-    values: Arc<Mutex<Vec<Value>>>,
+    keys: Arc<RwLock<Vec<String>>>,
+    values: Arc<RwLock<Vec<Value>>>,
     feature: &Feature,
 ) -> Option<ProtoFeature> {
     let mut proto_feature = ProtoFeature::new();
@@ -149,8 +159,8 @@ impl MapboxLayer {
         Self {
             layer,
             tile_projector: Arc::new(tile_projector),
-            keys: Arc::new(Mutex::new(vec![])),
-            values: Arc::new(Mutex::new(vec![])),
+            keys: Arc::new(RwLock::new(vec![])),
+            values: Arc::new(RwLock::new(vec![])),
         }
     }
 
@@ -173,10 +183,12 @@ impl MapboxLayer {
 
         self.layer.features = proto_features;
 
-        let keys = self.keys.lock().unwrap();
-        let values = self.values.lock().unwrap();
+        let keys = self.keys.read().unwrap();
+        let values = self.values.read().unwrap();
         self.layer.keys = keys.clone();
         self.layer.values = values.clone();
+        drop(keys);
+        drop(values);
     }
 
     pub fn get_layer(&self) -> ProtoLayer {
